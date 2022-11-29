@@ -1,92 +1,98 @@
-const synth = new Tone.Synth().toDestination();
+// Each items can be either null (empty), 0 (player 1), 1 (player 2)
+const boardState = [
+    null, null, null,
+    null, null, null,
+    null, null, null
+];
 
-function playTone (note) {
-    synth.triggerAttackRelease(note, "8n");
-    Tone.start();
-}
+// The win condition Array
+const winConditions = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [6, 4, 2],
+];
 
-function randomArrayElement (array) {
-    const randomIndex = Math.floor(Math.random() * array.length);
-    const randomValue = array[randomIndex];
+// The Active Player
+let activePlayer = 0;
 
-    return randomValue;
-}
+// Cells
+const cells = document.querySelectorAll("td");
 
-const tones = ["D5", "A4", "B4", "G4"];
-
-const cells = document.querySelectorAll(".cell");
-
-const keys  = ["KeyA", "KeyS", "KeyD", "KeyF"];
-
-const gameState = {
-    patternState: [], 
-    playerState: [],
-};
-
-function cellActivated (event) {
-    const currentCell = event.target;
-    const index = currentCell.dataset.index;
-
-    gameState.playerState.push(index);
-
-    playTone(tones[index]);
-
-    // Chech if patternState and palyerState are the same length
-    if(gameState.patternState.length === gameState.playerState.length){
-        if (gameState.patternState.join(",") === gameState.playerState.join(",")) {
-            gameState.playerState = [];
-
-            selectRandomToneAndPlay();
-
-            return true;
-        }
-        
-        alert("GAME OVER");
-    }
-}
-
-function selectRandomToneAndPlay () {
-    const cell = randomArrayElement(Array.from(cells));
-    const index = cell.dataset.index;
-    
-    gameState.patternState.push(index);
-    
-    const clonedPattern = gameState.patternState.slice(0);
-
-    const patternInterval = setInterval(function () {
-        const i = clonedPattern.shift();
-
-        cells[i].classList.toggle("on");
-
-        setTimeout(function () {
-            cells[i].classList.toggle("on");
-        }, 500);
-
-        playTone(tones[i]);
-
-        if (clonedPattern.length === o) {
-            clearInterval(patternInterval);
-        }
-    }, 800);
-}
-
+// Add event listeners to cells
 cells.forEach(function (cell, index) {
     cell.dataset.index = index;
-    cell.addEventListener("click", cellActivated);
+
+    cell.onmouseover = function (event) {
+        cell.style.backgroundColor = "#ccc";
+        cell.style.transition = "1s";
+    }
+
+    cell.onmouseout = function () {
+        cell.style.backgroundColor = "#fff";
+    }
+
+    cell.addEventListener("click", clicked);
 });
 
-document.onkeydown = function(event) {
-    const index = keys.indexOf(event.code);
+// Clicked function definition
+function clicked (event) {
+    const index = Number(event.target.dataset.index);
 
-    if (index !== -1) {
-        cells[index].click();
-        cells[index].classList.toggle("on");
+    const letter = activePlayer ? "o" : "x";
+
+    const cell = event.target;
+    event.target.textContent = letter;
+
+    boardState[index] =  activePlayer;
+
+    cell.removeEventListener("click", clicked);
+    cell.onmouseover = null;
+
+    if (hasWon()) {
+        window.location = "./winner.html";
     }
+
+    if (hasDrawn()) {
+        window.location = "./draw.html";
+    }
+
+    activePlayer = activePlayer ? 0 : 1; 
 }
 
-document.querySelector("button").onclick = function () {
-    gameState.patternState = [];
-    gameState.playerState = [];
+// The win detector
+function hasWon () {
+    for (const condition of winConditions) {
+        const boardValues = condition.map(function (item) {
+            return boardState[item];
+        });
 
-    selectRandomToneAndPlay();
+        const playerPieces = boardValues.filter(function (item) {
+            return item === activePlayer;
+        });
+
+        if (playerPieces.length ===3) return true;
+    }
+
+    return false;
+}
+
+function hasDrawn () {
+    const boardCapacity = boardState.filter(function (item) {
+        return item !== null;
+    });
+
+    return boardCapacity.length === boardState.length;
+}
+
+const again = document.querySelector("#again");
+if (again) {
+    again.onclick = (event) => {
+        event.preventDefault();
+        window.location = "./";
+    }
 }
